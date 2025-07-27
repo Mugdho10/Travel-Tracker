@@ -6,11 +6,11 @@ const app = express();
 const port = 3000;
 
 const db = new pg.Client({
-  user : "postgres",
-  host : "localhost",
-  database : "world",
-  password : "123456",
-  port : 5432
+  user: "postgres",
+  host: "localhost",
+  database: "world",
+  password: "123456",
+  port: 5432
 });
 
 db.connect();
@@ -36,19 +36,37 @@ app.get("/", async (req, res) => {
 app.post("/add", async (req, res) => {
   const input = req.body["country"];
 
-  const result = await db.query(
-    "SELECT country_code FROM countries WHERE country_name = $1",
-    [input]
-  );
+  try {
+    const result = await db.query(
+      "SELECT country_code FROM countries WHERE country_name = $1",
+      [input]
+    );
 
-  if (result.rows.length !== 0) {
     const data = result.rows[0];
     const countryCode = data.country_code;
 
+    try {
     await db.query("INSERT INTO visited_countries (country_code) VALUES ($1)", [
       countryCode,
     ]);
     res.redirect("/");
+  } catch (err) {
+    console.log(err);
+    const countries = await checkVisisted();
+    res.render("index.ejs", { 
+      countries: countries, 
+      total: countries.length, 
+      error: "Country has already been added, try again."
+    });
+  }
+  } catch (err) {
+    console.log(err);
+    const countries = await checkVisisted();
+    res.render("index.ejs", { 
+      countries: countries, 
+      total: countries.length, 
+      error: "Country does not exist, try again."
+    });
   }
 });
 
